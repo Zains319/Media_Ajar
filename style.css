@@ -313,12 +313,6 @@ html, body {
   margin-top: auto;
 }
 
-main.container {
-  min-height: calc(100vh - 60px); /* menyesuaikan tinggi header + footer */
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
 
 
 
