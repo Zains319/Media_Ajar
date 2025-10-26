@@ -278,6 +278,59 @@ canvas{background:linear-gradient(#dff0ff,#ffffff);border-radius:6px;max-width:1
 }
 
 
+/* ===== FIX Footer: place at bottom and avoid overlapping ===== */
+
+/* base page sizing */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* body is a column so footer naturally goes to bottom */
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* make main content fill the remaining vertical space */
+main.container {
+  flex: 1 1 auto;        /* allow grow/shrink and occupy remaining height */
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+/* footer normal flow (not fixed/absolute) and visually separated */
+.footer {
+  position: relative;    /* ensure it's in normal flow */
+  z-index: 1;            /* low z-index so overlays still above it */
+  background: rgba(0,0,0,0.35);
+  color: #fff;
+  text-align: center;
+  padding: 12px 16px;
+  margin-top: 0;         /* do not leave extra margin that lifts it */
+  box-shadow: 0 -6px 20px rgba(0,0,0,0.18);
+}
+
+/* ensure overlays still center above everything */
+.overlay {
+  z-index: 9999;         /* overlays must be above footer/content */
+}
+
+/* safety: if any footer was accidentally fixed/absolute, override it */
+.footer[style], .footer.fixed, .footer.absolute {
+  position: relative !important;
+}
+
+/* mobile tweak: make sure main has appropriate min-height on small screens */
+@media (max-width: 720px) {
+  main.container {
+    min-height: calc(100vh - 56px); /* adjust if topbar/footer height differs */
+  }
+}
+
 
 
 
