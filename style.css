@@ -331,6 +331,133 @@ main.container {
   }
 }
 
+/* ===== FIX FLASHCARD LAYOUT & IMAGE SIZING ===== */
+
+/* Bungkus flash area agar kontrol tidak menempel ke kartu */
+.flash-area {
+  width: 100%;
+  max-width: 880px;
+  margin: 0 auto 36px; /* jarak bawah cukup agar tombol & footer tidak menutupi */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 8px;
+  box-sizing: border-box;
+}
+
+/* Pastikan card punya ruang visual dan tidak overflow ke luar */
+#card {
+  width: 720px;
+  max-width: 95%;
+  height: 360px;           /* sedikit lebih tinggi agar gambar proporsional */
+  margin: 0 auto;
+  perspective: 1400px;
+  position: relative;
+  display: block;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.18);
+  border-radius: 12px;
+  overflow: hidden;        /* sangat penting: potong bagian gambar yang melebihi kartu */
+  background: linear-gradient(135deg,#232034,#14121a); /* safety bg */
+}
+
+/* kedua muka kartu tetap absolute tetapi sekarang tidak memecah layout */
+#card .card-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  padding: 20px;
+  box-sizing: border-box;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+  transition: transform 0.65s cubic-bezier(.2,.8,.2,1), opacity .3s;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  overflow: hidden;
+}
+
+/* ukuran gambar di dalam kartu: tidak lebih tinggi dari area kartu */
+#card .img-wrap {
+  flex: 1;
+  max-width: 48%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding-right:12px;
+  height: 100%;
+}
+#card .img-wrap img {
+  width: 100%;
+  max-width: 100%;
+  max-height: calc(100% - 6px); /* jaga agar gambar tidak melebihi tinggi face */
+  object-fit: contain;
+  border-radius: 8px;
+  display: block;
+}
+
+/* hiragana area */
+#card .hiragana-wrap {
+  flex: 1;
+  max-width: 48%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height: 100%;
+  padding-left:12px;
+}
+#card .hiragana {
+  font-size: 3.6rem;
+  line-height: 1;
+  text-align:center;
+  word-break: break-word;
+}
+
+/* Pastikan saat ter-flip, muka belakang berada di atas */
+#card .front  { z-index: 2; }
+#card.flipped .front { transform: rotateY(180deg); z-index:1; }
+#card .back   { transform: rotateY(180deg); z-index: 1; }
+#card.flipped .back  { transform: rotateY(360deg); z-index:2; }
+
+/* Kontrol (tombol) beri jarak yang cukup dan posisikan di luar area kartu */
+.flash-controls {
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  justify-content:center;
+  margin-top: 8px;    /* jarak atas kecil */
+  margin-bottom: 6px; /* jarak bawah kecil */
+  z-index: 3;
+}
+
+/* pastikan tombol tidak menempel ke tepi kartu */
+.flash-controls .btn {
+  padding: 10px 16px;
+  border-radius: 12px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+}
+
+/* beri sedikit ruang ekstra sebelum progress/footer */
+.flash-progress {
+  margin-top: 8px;
+  margin-bottom: 24px;
+  color: var(--muted);
+}
+
+/* Jangan biarkan footer menempel ke atas konten */
+.container { padding-bottom: 64px; }
+
+/* mobile tweaks */
+@media (max-width: 800px) {
+  #card { height: 420px; }
+  #card .hiragana { font-size: 3rem; }
+  .flash-area { padding: 0 12px 24px; margin-bottom: 28px; }
+  .flash-controls { gap: 8px; }
+}
+
+/* debug helper (hapus/koment jika sudah rapi) */
+/* .flash-area { outline: 1px dashed rgba(255,255,255,0.03); } */
+
 
 
 
