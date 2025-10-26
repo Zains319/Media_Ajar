@@ -292,6 +292,34 @@ body {
   color: var(--text);
 }
 
+html, body {
+  height: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  background-color: #1a092d; /* fallback jika gambar gagal dimuat */
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+/* Pastikan footer selalu menempel di bawah */
+.footer {
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  text-align: center;
+  padding: 10px 0;
+  margin-top: auto;
+}
+
+main.container {
+  min-height: calc(100vh - 60px); /* menyesuaikan tinggi header + footer */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
 
 
 
