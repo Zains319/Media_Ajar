@@ -277,6 +277,28 @@ canvas{background:linear-gradient(#dff0ff,#ffffff);border-radius:6px;max-width:1
   }
 }
 
+/* Pusatkan Flashcard di Tengah Halaman */
+.flash-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;   /* center vertical */
+  min-height: 80vh;          /* tinggi minimum agar tetap di tengah layar */
+  gap: 20px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.flash-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  max-width: 900px;
+}
+
+
 
 /* ===== FIX Footer: place at bottom and avoid overlapping ===== */
 
@@ -457,6 +479,7 @@ main.container {
 
 /* debug helper (hapus/koment jika sudah rapi) */
 /* .flash-area { outline: 1px dashed rgba(255,255,255,0.03); } */
+
 
 
 
