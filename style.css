@@ -1,487 +1,844 @@
-:root{
-  --bg:#1a092d;
-  --card:#3b1053;
-  --accent:#ff2d75;
-  --text:#f3e8ff;
-  --muted:#c9a8ff;
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
-}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
-.topbar{background:#2a0e40;padding:16px;text-align:center;font-size:1.2rem;color:var(--accent);font-weight:700}
-.container{flex:1;padding:24px;max-width:1000px;margin:0 auto;width:100%}
-.panel{display:block}
-.hidden{display:none}
-.home-title{text-align:center;margin-bottom:24px}
-.menu-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px}
-.menu-card{background:var(--card);padding:24px;border-radius:12px;cursor:pointer;box-shadow:0 6px 16px rgba(0,0,0,0.3);transition:transform .18s,background .18s}
-.menu-card:hover{background:#531c7c;transform:translateY(-4px)}
-.menu-card h3{margin:0;color:var(--accent)}
-.backBtn{background:var(--accent);border:none;padding:8px 14px;border-radius:8px;color:white;margin-bottom:10px;cursor:pointer}
-.formBox{display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin-top:8px}
-.formBox input{padding:8px 12px;border-radius:6px;border:1px solid #ccc;background:white;color:black}
-.formBox button{background:var(--accent);color:#fff;border:none;padding:8px 14px;border-radius:8px;cursor:pointer}
-.muted{color:var(--muted)}
-.instruction{max-width:760px;font-size:0.95rem;margin-top:6px}
+/* ===== Root Variables ===== */
+:root {
+  --blue: #0a74d6;
+  --blue-2: #0a6bdc;
+  --muted: #6b85a3;
+  --bg: #eef5ff;
+  --card: #ffffff;
+  --soft: #dfefff;
+  --shadow: 0 8px 24px rgba(13,52,102,0.08);
 
-/* canvas */
-.game-area{display:flex;justify-content:center;margin-top:12px}
-canvas{background:linear-gradient(#dff0ff,#ffffff);border-radius:6px;max-width:100%;height:auto;box-shadow:0 6px 18px rgba(0,0,0,0.06)}
-
-/* overlay */
-.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.7);z-index:1000}
-.question-box,.endBox{background:white;color:black;padding:18px;border-radius:10px;width:320px;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,0.25)}
-.q-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-.q-prompt{font-weight:700}
-.q-timer{font-weight:700}
-.q-choices{display:flex;gap:10px;justify-content:center;margin-top:8px}
-.choice{padding:10px 14px;border-radius:8px;border:1px solid #ddd;background:#f7f7f7;cursor:pointer;font-size:1.1rem}
-.choice:hover{transform:translateY(-3px)}
-.btnRow{display:flex;gap:12px;justify-content:center;margin-top:12px}
-.btnRow button{background:var(--accent);color:#fff;border:none;padding:8px 12px;border-radius:8px;cursor:pointer}
-
-/* countdown big number */
-#countNum{font-size:6rem;color:white;font-weight:700;animation:pop .45s ease}
-@keyframes pop{from{transform:scale(.3);opacity:0}to{transform:scale(1);opacity:1}}
-
-@media (max-width:720px){
-  .question-box,.endBox{width:92%}
-  .menu-grid{grid-template-columns:1fr}
-}
-/* ===== FLASHCARD (WORKING, non-conflicting) ===== */
-/* target only #card to avoid colliding with other .card rules */
-#card {
-  width: 720px;
-  max-width:95%;
-  height: 320px;
-  margin: 0 auto;
-  perspective: 1400px;
-  position: relative;
+  --dark-bg: #0d1a26;
+  --dark-card: #13293d;
+  --dark-text: #d7e9ff;
+  --dark-soft: #17324c;
+  font-family: Inter, Poppins, system-ui;
 }
 
-/* internal 3D container:
-   we'll use transform on #card to avoid needing extra inner element */
-#card.flipped .front { transform: rotateY(180deg); z-index:1; }
-#card.flipped .back  { transform: rotateY(360deg); z-index:2; }
+/* ===== Dark Mode ===== */
+body.dark {
+  background: var(--dark-bg);
+  color: var(--dark-text);
+}
 
-/* Both faces share baseline styling */
-#card .card-face {
-  position: absolute;
-  inset: 0;
-  border-radius: 12px;
-  padding: 20px;
+body.dark .sidebar {
+  background: var(--dark-card);
+  border-right-color: #1e3a56;
+}
+
+body.dark .menu a {
+  color: #9dd1ff;
+}
+
+body.dark .menu a.active {
+  background: var(--blue);
+  color: #fff;
+}
+
+body.dark .card-block,
+body.dark .menu-card,
+body.dark .hero,
+body.dark .pos-card-small,
+body.dark .card-face.front {
+  background: var(--dark-card);
+  color: var(--dark-text);
+  border-color: #1f3d5c;
+}
+
+body.dark .card-face.back {
+  background: linear-gradient(180deg, #0f4ea8, #0d3c7d);
+}
+
+/* ===== Reset ===== */
+* {
   box-sizing: border-box;
-  backface-visibility: hidden;
-  transform-style: preserve-3d;
-  transition: transform 0.65s cubic-bezier(.2,.8,.2,1), opacity .3s;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  overflow:hidden;
-}
-
-/* front initially visible (0deg) */
-#card .front { transform: rotateY(0deg); background: linear-gradient(135deg,#2a2a3b,#1b1b2a); color:#fff; }
-
-/* back sits rotated 180deg (so when card rotates it becomes visible) */
-#card .back { transform: rotateY(180deg); background: linear-gradient(135deg,#252537,#1b1b2a); color:#fff; flex-direction:column; justify-content:center; text-align:center; }
-
-/* inside */
-#card .img-wrap{ flex:1; max-width:48%; display:flex; align-items:center; justify-content:center; padding-right:12px; }
-#card .img-wrap img{ width:100%; max-width:260px; border-radius:8px; object-fit:contain; }
-#card .hiragana-wrap{ flex:1; max-width:48%; display:flex; align-items:center; justify-content:center; }
-#card .hiragana{ font-size:4rem; font-weight:800; color:#fff; text-shadow:0 2px 8px rgba(0,0,0,0.6) }
-#card .romaji{ font-size:2rem; font-weight:700 }
-#card .meaning{ font-size:1.05rem; color:rgba(255,255,255,0.9) }
-#card .desc{ font-size:.95rem; color:rgba(255,255,255,0.8); margin-top:8px }
-
-/* ensure controls look OK (use your existing .btn styles) */
-.flash-controls .btn{ margin:0 4px }
-
-/* responsive stack */
-@media (max-width:800px){
-  #card .front{ flex-direction:column; gap:18px; padding:18px }
-  #card .hiragana{ font-size:3rem }
-}
-
-
-#materi {
-  background: #1a1a2e;
-  color: #fff;
-  padding: 20px;
-  line-height: 1.6;
-}
-
-.white { color: #fff; }
-
-.materi-block {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 18px;
-  transition: background 0.3s;
-}
-.materi-block:hover {
-  background: rgba(255,255,255,0.1);
-}
-
-.toggleBtn {
-  margin-top: 10px;
-  background: #ff5ca1;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 14px;
-  cursor: pointer;
-}
-
-.example {
-  margin-top: 10px;
-  padding: 12px;
-  background: rgba(255,255,255,0.08);
-  border-radius: 8px;
-}
-
-.hidden { display: none; }
-
-.pos-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
-}
-.posBtn {
-  flex: 1 1 100px;
-  background: #2b2b45;
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  padding: 8px;
-  cursor: pointer;
-  font-size: 1.2rem;
-  transition: background 0.3s;
-}
-.posBtn:hover {
-  background: #ff5ca1;
-}
-.pos-info {
-  margin-top: 16px;
-  text-align: center;
-  background: rgba(255,255,255,0.08);
-  padding: 12px;
-  border-radius: 10px;
-}
-
-.menu-list .menu-card {
-  background: var(--card);
-  padding: 24px;
-  border-radius: 14px;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.3);
-  transition: background 0.25s, transform 0.2s;
-  cursor: pointer;
-  text-align: left;
-}
-.menu-list .menu-card:hover {
-  background: #531c7c;
-  transform: translateY(-4px);
-}
-.menu-list .menu-card h3 {
-  color: var(--accent);
-  margin-bottom: 8px;
-  font-size: 1.4rem;
-}
-.menu-list .menu-card p {
-  color: var(--text);
-  font-size: 1rem;
-  line-height: 1.6;
-}
-
-
-/* === FIX: Membuat teks dalam contoh materi agar tidak keluar kotak di HP === */
-.example {
-  overflow-x: auto;          /* biar kalau teks kepanjangan bisa di-scroll horizontal */
-  word-wrap: break-word;     /* memecah kata panjang */
-  white-space: pre-wrap;     /* membuat teks <pre> tetap membungkus di layar kecil */
-  max-width: 100%;
-  box-sizing: border-box;
-}
-
-.example pre,
-.example p {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  font-size: 1rem;
-  line-height: 1.6;
-  color: #fff;
-}
-
-/* di layar kecil, ubah ukuran teks agar tetap terbaca dan rapi */
-@media (max-width: 600px) {
-  .example {
-    font-size: 0.9rem;
-    padding: 10px;
-  }
-}
-
-
-/* ===== Tombol Flashcard Baru ===== */
-.flash-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: center;
-  margin-top: 16px;
-}
-
-.flash-controls .btn {
-  background: linear-gradient(135deg, #7b2ff7, #f107a3);
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  padding: 10px 18px;
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: 0.5px;
-  cursor: pointer;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
-  transition: all 0.3s ease;
-}
-
-/* Efek hover dan klik */
-.flash-controls .btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 14px rgba(255, 45, 117, 0.5);
-}
-
-.flash-controls .btn:active {
-  transform: scale(0.97);
-  box-shadow: 0 2px 8px rgba(255, 45, 117, 0.4);
-}
-
-/* Tombol utama (Flip) lebih menonjol */
-.flash-controls .btn.primary {
-  background: linear-gradient(135deg, #ff2d75, #ff6ec7);
-}
-
-/* Responsif di HP */
-@media (max-width: 600px) {
-  .flash-controls {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .flash-controls .btn {
-    width: 100%;
-    font-size: 1rem;
-  }
-}
-
-/* Pusatkan Flashcard di Tengah Halaman */
-.flash-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;   /* center vertical */
-  min-height: 80vh;          /* tinggi minimum agar tetap di tengah layar */
-  gap: 20px;
-  padding: 20px;
-  box-sizing: border-box;
-}
-
-.flash-area {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 18px;
-  width: 100%;
-  max-width: 900px;
-}
-
-
-
-/* ===== FIX Footer: place at bottom and avoid overlapping ===== */
-
-/* base page sizing */
-html, body {
-  height: 100%;
   margin: 0;
   padding: 0;
 }
 
-/* body is a column so footer naturally goes to bottom */
 body {
+  background: var(--bg);
+  color: #0b2b45;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+
+  /* Panel slide animation */
+  overflow-x: hidden;
 }
 
-/* make main content fill the remaining vertical space */
-main.container {
-  flex: 1 1 auto;        /* allow grow/shrink and occupy remaining height */
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+/* ===== Sidebar ===== */
+.sidebar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 240px;
+  background: var(--card);
+  border-right: 1px solid #e6f0ff;
+  padding: 28px 18px;
+  box-shadow: 0 6px 20px rgba(10,20,40,0.03);
 }
 
-/* footer normal flow (not fixed/absolute) and visually separated */
-.footer {
-  position: relative;    /* ensure it's in normal flow */
-  z-index: 1;            /* low z-index so overlays still above it */
-  background: rgba(0,0,0,0.35);
+.logo {
+  color: var(--blue);
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 18px;
+}
+
+/* Dark Mode Toggle Button */
+.theme-toggle {
+  background: var(--soft);
+  border: none;
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  margin-bottom: 18px;
+  font-size: 1.2rem;
+  transition: 0.2s;
+}
+
+.theme-toggle:hover {
+  background: var(--blue);
   color: #fff;
+}
+
+.menu a {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--blue-2);
+  text-decoration: none;
+  margin-bottom: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.menu a:hover {
+  background: var(--soft);
+  transform: translateY(-3px);
+}
+
+.menu a.active {
+  background: var(--blue);
+  color: white;
+  box-shadow: 0 6px 18px rgba(10,118,214,0.12);
+}
+
+/* ===== Main Area ===== */
+.main {
+  margin-left: 260px;
+  padding: 28px;
+  width: calc(100% - 260px);
+  flex: 1;
+}
+
+/* Hero */
+.hero {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  background: var(--card);
+  padding: 22px;
+  border-radius: 14px;
+  border: 1px solid #e6f6ff;
+  box-shadow: var(--shadow);
+}
+
+.hero-img {
+  width: 320px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 3px dashed var(--blue);
+}
+
+.hero-text h1 {
+  color: var(--blue-2);
+}
+
+/* ===== Panels ===== */
+.panel {
+  display: none;
+  margin-top: 20px;
+  opacity: 0;
+  transform: translateX(50px);
+  transition: 0.35s ease;
+}
+
+.panel.show {
+  display: block;
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Section Title */
+.section-title {
+  color: var(--blue-2);
+  margin-bottom: 8px;
+  font-size: 1.25rem;
+}
+
+/* Deskripsi belakang flashcard — lebih jelas & kontras */
+.desc {
+  margin-top: 8px;
+  font-size: 1rem;
+  color: #ffffff;
+  opacity: 0.95;
   text-align: center;
-  padding: 12px 16px;
-  margin-top: 0;         /* do not leave extra margin that lifts it */
-  box-shadow: 0 -6px 20px rgba(0,0,0,0.18);
+  line-height: 1.35;
+
+  /* sedikit glow agar terbaca di background biru */
+  text-shadow: 0 1px 3px rgba(0,0,0,0.25);
 }
 
-/* ensure overlays still center above everything */
-.overlay {
-  z-index: 9999;         /* overlays must be above footer/content */
+
+/* ===== Menu Cards ===== */
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
 }
 
-/* safety: if any footer was accidentally fixed/absolute, override it */
-.footer[style], .footer.fixed, .footer.absolute {
-  position: relative !important;
+.menu-card {
+  background: var(--card);
+  padding: 18px;
+  border-radius: 12px;
+  border: 1px solid #e6f6ff;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: 0.2s;
 }
 
-/* mobile tweak: make sure main has appropriate min-height on small screens */
-@media (max-width: 720px) {
-  main.container {
-    min-height: calc(100vh - 56px); /* adjust if topbar/footer height differs */
-  }
+.menu-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 14px 36px rgba(13,52,102,0.08);
 }
 
-/* ===== FIX FLASHCARD LAYOUT & IMAGE SIZING ===== */
+/* ===== Card Block ===== */
+.card-block {
+  background: var(--card);
+  padding: 16px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  border: 1px solid #e8f5ff;
+}
 
-/* Bungkus flash area agar kontrol tidak menempel ke kartu */
-.flash-area {
+/* ===== Posisi Grid ===== */
+.pos-grid {
+  display: grid;
+  grid-template-columns: repeat(5,1fr);
+  gap: 10px;
+}
+
+.posBtn {
+  padding: 10px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(180deg,#e9f5ff,#dfefff);
+  color: var(--blue-2);
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.12s;
+}
+
+.posBtn:hover {
+  transform: translateY(-3px);
+}
+
+/* ===== Pos Info Box ===== */
+.pos-info {
+  margin-top: 14px;
+  display: flex;
+  justify-content: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.pos-info.hidden {
+  display: none;
+}
+
+/* Small 3D Card */
+.pos-card-small {
+  width: 260px;
+  min-height: 180px;
+  padding: 16px;
+  background: var(--card);
+  border-radius: 14px;
+  border: 1px solid #e6f5ff;
+  box-shadow: var(--shadow);
+
+  position: relative;
+  perspective: 1200px;
+  cursor: pointer;
+}
+
+.pos-card-small .card-face {
+  position: absolute;
   width: 100%;
-  max-width: 880px;
-  margin: 0 auto 36px; /* jarak bawah cukup agar tombol & footer tidak menutupi */
+  height: 100%;
+  border-radius: 14px;
+  padding: 16px;
+
+  backface-visibility: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-  padding-bottom: 8px;
-  box-sizing: border-box;
+  justify-content: center;
+  transition: 0.6s;
 }
 
-/* Pastikan card punya ruang visual dan tidak overflow ke luar */
-#card {
-  width: 720px;
-  max-width: 95%;
-  height: 360px;           /* sedikit lebih tinggi agar gambar proporsional */
-  margin: 0 auto;
-  perspective: 1400px;
+.pos-card-small .front {
+  background: #ffffff;
+}
+
+.pos-card-small .back {
+  background: linear-gradient(180deg, #0a74d6, #0a6bdc);
+  color: white;
+  transform: rotateY(180deg);
+}
+
+.pos-card-small.flipped .front {
+  transform: rotateY(-180deg);
+}
+
+.pos-card-small.flipped .back {
+  transform: rotateY(0deg);
+}
+
+.jp { font-weight: 700; }
+.indo { color: #e5f2ff; }
+
+/* ===== Flashcards ===== */
+.flash-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.card-3d {
+  width: 270px;
+  height: 330px;
+  perspective: 1200px;
   position: relative;
-  display: block;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.18);
-  border-radius: 12px;
-  overflow: hidden;        /* sangat penting: potong bagian gambar yang melebihi kartu */
-  background: linear-gradient(135deg,#232034,#14121a); /* safety bg */
 }
 
-/* kedua muka kartu tetap absolute tetapi sekarang tidak memecah layout */
-#card .card-face {
-  position: absolute;
-  inset: 0;
-  border-radius: 12px;
-  padding: 20px;
-  box-sizing: border-box;
-  backface-visibility: hidden;
-  transform-style: preserve-3d;
-  transition: transform 0.65s cubic-bezier(.2,.8,.2,1), opacity .3s;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  overflow: hidden;
-}
-
-/* ukuran gambar di dalam kartu: tidak lebih tinggi dari area kartu */
-#card .img-wrap {
-  flex: 1;
-  max-width: 48%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding-right:12px;
-  height: 100%;
-}
-#card .img-wrap img {
+.card-3d .card-face {
   width: 100%;
-  max-width: 100%;
-  max-height: calc(100% - 6px); /* jaga agar gambar tidak melebihi tinggi face */
-  object-fit: contain;
-  border-radius: 8px;
-  display: block;
-}
-
-/* hiragana area */
-#card .hiragana-wrap {
-  flex: 1;
-  max-width: 48%;
+  height: 100%;
+  border-radius: 14px;
+  position: absolute;
+  top:0;
+  left:0;
+  backface-visibility: hidden;
   display:flex;
+  flex-direction:column;
   align-items:center;
   justify-content:center;
-  height: 100%;
-  padding-left:12px;
-}
-#card .hiragana {
-  font-size: 3.6rem;
-  line-height: 1;
-  text-align:center;
-  word-break: break-word;
+  transition: transform .6s;
 }
 
-/* Pastikan saat ter-flip, muka belakang berada di atas */
-#card .front  { z-index: 2; }
-#card.flipped .front { transform: rotateY(180deg); z-index:1; }
-#card .back   { transform: rotateY(180deg); z-index: 1; }
-#card.flipped .back  { transform: rotateY(360deg); z-index:2; }
+.card-3d .front {
+  background: white;
+}
 
-/* Kontrol (tombol) beri jarak yang cukup dan posisikan di luar area kartu */
+.card-3d .back {
+  background: linear-gradient(180deg,#0a74d6,#0a6bdc);
+  color:#fff;
+  transform: rotateY(180deg);
+}
+
+.card-3d.flipped .front {
+  transform: rotateY(-180deg);
+}
+.card-3d.flipped .back {
+  transform: rotateY(0deg);
+}
+
+.flash-img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+}
+
 .flash-controls {
-  display:flex;
-  flex-wrap:wrap;
-  gap:12px;
-  justify-content:center;
-  margin-top: 8px;    /* jarak atas kecil */
-  margin-bottom: 6px; /* jarak bawah kecil */
-  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-/* pastikan tombol tidak menempel ke tepi kartu */
-.flash-controls .btn {
-  padding: 10px 16px;
-  border-radius: 12px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.18);
+.btn {
+  padding: 10px 12px;
+  border: none;
+  background: #dfefff;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
-/* beri sedikit ruang ekstra sebelum progress/footer */
-.flash-progress {
-  margin-top: 8px;
-  margin-bottom: 24px;
+.btn.primary {
+  background: var(--blue);
+  color: white;
+}
+
+/* ===== Footer ===== */
+.footer {
+  margin-left: 260px;
+  padding: 18px;
   color: var(--muted);
 }
 
-/* Jangan biarkan footer menempel ke atas konten */
-.container { padding-bottom: 64px; }
+/* Responsive */
+@media(max-width:900px){
+  .sidebar {
+    width: 70px;
+  }
 
-/* mobile tweaks */
-@media (max-width: 800px) {
-  #card { height: 420px; }
-  #card .hiragana { font-size: 3rem; }
-  .flash-area { padding: 0 12px 24px; margin-bottom: 28px; }
-  .flash-controls { gap: 8px; }
+  .main {
+    margin-left: 90px;
+    width: calc(100% - 90px);
+  }
+
+  .menu a {
+    font-size: 0.7rem;
+    padding: 6px;
+  }
+
+  .hero-img { display:none; }
 }
 
-/* debug helper (hapus/koment jika sudah rapi) */
-/* .flash-area { outline: 1px dashed rgba(255,255,255,0.03); } */
+/* === FLOATING BACK BUTTON === */
+.floating-back {
+  position: fixed;
+  top: 20px;
+  left: 280px; /* menyesuaikan sidebar */
+  z-index: 9999;
 
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
 
+  background: var(--blue);
+  color: #fff;
 
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
+  font-size: 1.4rem;
+  font-weight: bold;
+  cursor: pointer;
 
+  box-shadow: 0 6px 20px rgba(10,118,214,0.25);
+  transition: all .25s ease;
+}
+
+/* Hover effect */
+.floating-back:hover {
+  background: var(--blue-2);
+  transform: translateX(-4px) scale(1.08);
+  box-shadow: 0 10px 26px rgba(10,118,214,0.35);
+}
+
+/* Dark mode */
+body.dark .floating-back {
+  background: #0d4a8c;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.45);
+}
+body.dark .floating-back:hover {
+  background: #0c5bb4;
+}
+
+/* RESPONSIVE (tablet & HP) */
+@media (max-width: 900px) {
+  .floating-back {
+    left: 84px; /* Sidebar kecil */
+  }
+}
+
+/* ============================================================
+   MOBILE RESPONSIVE (max-width: 768px)
+   ============================================================ */
+   @media (max-width: 768px) {
+
+    /* Layout dasar */
+    .sidebar {
+      width: 70px;
+      padding: 15px 10px;
+    }
+  
+    .sidebar h2.logo {
+      font-size: 16px;
+      text-align: center;
+      padding: 0;
+    }
+  
+    /* Tombol dark mode */
+    #themeToggle {
+      width: 40px;
+      height: 40px;
+      font-size: 18px;
+    }
+  
+    /* Sidebar menu icons only */
+    .menu a {
+      font-size: 14px;
+      padding: 10px 0;
+      text-align: center;
+    }
+  
+    .menu a::after {
+      display: none;
+    }
+  
+    /* Main area */
+    .main {
+      margin-left: 70px;
+      padding: 15px;
+    }
+  
+    /* Hero section */
+    .hero {
+      flex-direction: column;
+      text-align: center;
+      gap: 10px;
+    }
+  
+    .hero-img {
+      width: 90%;
+      max-width: 220px;
+    }
+  
+    .hero-text h1 {
+      font-size: 20px;
+    }
+  
+    .menu-grid {
+      grid-template-columns: 1fr;
+      gap: 15px;
+    }
+  
+    /* Panel layout */
+    .panel {
+      padding: 15px;
+    }
+  
+    .section-title {
+      font-size: 20px;
+    }
+  
+    /* Back button floating */
+    .backBtn {
+      position: fixed;
+      top: 12px;
+      right: 12px;
+      padding: 10px 14px;
+      border-radius: 50px;
+      font-size: 14px;
+      z-index: 9999;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+  
+    /* Kosakata Posisi */
+    .pos-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+  
+    #posInfoBox {
+      width: 100%;
+      max-width: 380px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 15px;
+    }
+  
+    .pos-card {
+      transform: scale(0.9);
+    }
+  
+    /* Flashcard bagian */
+    .flash-wrapper {
+      padding: 10px 0;
+    }
+  
+    /* Flashcard 3D size */
+    .card-3d {
+      width: 90%;
+      height: 280px;
+    }
+  
+    .flash-img {
+      width: 100%;
+      height: 150px;
+      object-fit: contain;
+    }
+  
+    .flash-controls {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+  
+    .flash-controls .btn {
+      width: 48%;
+      padding: 8px;
+      font-size: 14px;
+    }
+  
+    .progress-line {
+      margin-top: 10px;
+    }
+  
+    /* Backside (hologram) adjust for mobile readability */
+    .romaji {
+      font-size: 18px;
+    }
+  
+    .meaning {
+      font-size: 22px;
+    }
+  
+    .desc {
+      font-size: 14px;
+      padding: 0 10px;
+    }
+  
+    /* Game placeholder */
+    #game .card-block {
+      font-size: 14px;
+    }
+  }
+  
+/* ----------------------------
+   DEFAULT VARIABLES
+----------------------------- */
+:root {
+  --nav-bg: #ffffff;
+  --nav-text: #2c2c2c;
+  --accent: #0a6bdc;
+}
+
+/* DARK MODE */
+.dark {
+  --nav-bg: #121212;
+  --nav-text: #ffffff;
+}
+
+/* ===============================
+   BOTTOM NAVBAR — MOBILE ONLY (DEFAULT)
+   =============================== */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 65px;
+  background: var(--nav-bg);
+  border-top: 2px solid rgba(0,0,0,0.15);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  z-index: 9999;
+}
+
+.nav-btn {
+  background: none;
+  border: none;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: var(--nav-text);
+  cursor: pointer;
+  transition: 0.25s;
+}
+
+.nav-btn .icon {
+  font-size: 1.35rem;
+}
+
+.nav-btn.active {
+  color: var(--accent);
+  transform: translateY(-4px);
+}
+
+/* Prevent overlap */
+main {
+  padding-bottom: 80px;
+}
+
+/* ===============================
+   DESKTOP MODE (≥ 900px)
+   → BOTTOM NAVBAR DISABLED
+   =============================== */
+@media (min-width: 900px) {
+
+  /* Hide bottom navbar completely */
+  .bottom-nav {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+  }
+
+  /* Sidebar kembali seperti biasa */
+  .sidebar {
+    display: block !important;
+  }
+
+  .main {
+    margin-left: 260px !important;
+    width: calc(100% - 260px) !important;
+  }
+
+  footer {
+    margin-left: 260px !important;
+  }
+}
+
+/* ===============================
+   MOBILE MODE (< 900px)
+   → SIDEBAR HILANG
+   → NAVBAR TETAP BOTTOM
+   =============================== */
+@media (max-width: 900px) {
+
+  /* Fully hide sidebar */
+  .sidebar {
+    display: none !important;
+    width: 0 !important;
+    min-width: 0 !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+  }
+
+  /* Bottom nav show */
+  .bottom-nav {
+    display: flex !important;
+  }
+
+  .main {
+    margin-left: 0 !important;
+    width: 100% !important;
+    padding-bottom: 80px;
+  }
+
+  footer {
+    margin-left: 0 !important;
+  }
+}
+
+/* ===== Kanji Wolf styles ===== */
+.wolf-game { max-width:920px; margin:12px auto 40px; padding:12px; }
+.game-header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:8px; }
+.game-title { font-weight:800; color:var(--blue-2); font-size:1.05rem; }
+.game-stats { color:var(--muted); font-weight:700; display:flex; gap:12px; align-items:center; }
+.game-instr { color:var(--muted); margin-bottom:12px; max-width:900px; }
+
+/* npc list */
+.npc-list { display:flex; gap:18px; flex-wrap:wrap; justify-content:center; align-items:flex-end; padding:8px; }
+.npc { width:120px; min-height:140px; background:var(--card); border-radius:12px; border:1px solid #e6f6ff; display:flex; flex-direction:column; align-items:center; padding:8px; cursor:pointer; transition: transform .18s ease, box-shadow .18s ease; box-shadow: 0 8px 20px rgba(10,30,70,0.04); }
+.npc:focus { outline:3px solid rgba(10,110,220,0.14); }
+.npc:hover { transform: translateY(-6px); box-shadow:0 18px 40px rgba(10,30,70,0.06); }
+
+/* avatar + bubble */
+.npc .avatar { font-size:36px; margin-top:6px; }
+.npc .bubble { margin-top:10px; background:linear-gradient(180deg,#ffffff,#f2f8ff); border-radius:12px; padding:8px 10px; font-weight:700; color:var(--blue-2); text-align:center; min-height:40px; display:flex; align-items:center; justify-content:center; }
+
+/* wrong / success states */
+.npc.correct { opacity:0.95; }
+.npc.wrong { animation:shake .45s; border-color:#ffbbbb; box-shadow: 0 8px 24px rgba(220,0,0,0.08); }
+.npc.success { animation:pop .35s; box-shadow:0 18px 46px rgba(30,160,80,0.12); border-color:#60c37a; }
+
+@keyframes shake {
+  0%{ transform:translateX(0) }
+  20%{ transform:translateX(-8px) }
+  40%{ transform:translateX(6px) }
+  60%{ transform:translateX(-4px) }
+  80%{ transform:translateX(2px) }
+  100%{ transform:translateX(0) }
+}
+@keyframes pop {
+  0%{ transform:scale(.9) }
+  60%{ transform:scale(1.06) }
+  100%{ transform:scale(1) }
+}
+
+/* small meta + message */
+.game-controls { display:flex; gap:12px; align-items:center; justify-content:center; margin-top:14px; }
+.kw-msg { color:var(--muted); font-weight:700; margin-left:8px; }
+
+/* overlay */
+.kw-overlay { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(3,10,25,0.55); z-index:99999; }
+.kw-overlay-card { background:var(--card); padding:18px; border-radius:12px; text-align:center; width:320px; box-shadow:0 18px 50px rgba(0,0,0,0.35); }
+.kw-overlay.hidden { display:none; }
+
+/* responsive adjustments */
+@media (max-width:700px) {
+  .npc { width:46%; min-height:120px; }
+  .npc .avatar { font-size:28px; }
+  .npc .bubble { font-size:0.95rem; min-height:44px; }
+  .wolf-game { padding:8px; }
+}
+
+/* FIX: HIDE ANYTHING WITH .hidden */
+.hidden {
+  display: none !important;
+}
+
+/* ===== DARK MODE FLOATING BUTTON (Mobile) ===== */
+@media (max-width: 900px) {
+  #themeToggle {
+    position: fixed;
+    bottom: 90px; 
+    right: 20px;
+    z-index: 99999;
+
+    width: 55px;
+    height: 55px;
+    border-radius: 50%;
+    font-size: 22px;
+    background: var(--blue);
+    color: white;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+  }
+
+  /* Pastikan tombol tetap muncul meskipun sidebar disembunyikan */
+  .sidebar #themeToggle {
+    display: none !important;
+  }
+}
+
+/* Tombol dark mode mobile */
+.theme-mobile {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .theme-mobile {
+    display: flex;
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    width: 55px;
+    height: 55px;
+    background: #2d6cdf;
+    color: #fff;
+    border-radius: 50%;
+    font-size: 24px;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    z-index: 99999;
+    border: none;
+    cursor: pointer;
+  }
+}
 
