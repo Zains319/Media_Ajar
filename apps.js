@@ -1,560 +1,390 @@
-// ===== DOM ELEMENTS =====
-const sections = ["home","materi","flashcards","game"];
-const goMateri = document.getElementById("goMateri");
-const goFlashcard = document.getElementById("goFlashcard");
-const goGame = document.getElementById("goGame");
+// script.js — robust single-file controller
+console.log("script.js loaded");
 
-const nameFormEl = document.getElementById("nameForm");
-const playerNameInput = document.getElementById("playerName");
-const startBtn = document.getElementById("startBtn");
+document.addEventListener("DOMContentLoaded", () => {
+  /* ===================== ELEMENT HELPERS ===================== */
+  const $ = (id) => document.getElementById(id);
+  const q = (sel) => document.querySelector(sel);
+  const qa = (sel) => Array.from(document.querySelectorAll(sel));
 
-const countdownEl = document.getElementById("countdown");
-const countNum = document.getElementById("countNum");
+  /* ===================== PANELS & NAV ===================== */
+  const panels = {
+    home: $("home"),
+    materi: $("materi"),
+    flashcards: $("flashcards"),
+    game: $("game")
+  };
 
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas ? canvas.getContext("2d") : null;
-// tambahkan di awal file (setelah deklarasi ctx)
-const playerImg = new Image();
-playerImg.src = "images/hero.png"; // ganti sesuai lokasi gambarmu
+  function showPanel(name) {
+    // hide all panels safely
+    Object.values(panels).forEach(p => p && p.classList.remove("show"));
+    if (panels[name]) panels[name].classList.add("show");
 
-function drawPlayer() {
-  if (!ctx || !player) return;
-  if (playerImg.complete) {
-    ctx.drawImage(playerImg, player.x, player.y - player.h, player.w, player.h);
-  } else {
-    playerImg.onload = () => {
-      ctx.drawImage(playerImg, player.x, player.y - player.h, player.w, player.h);
-    };
+    // sidebar active
+    qa(".menu a").forEach(a => a.classList.remove("active"));
+    const sb = $("sb_" + name);
+    if (sb) sb.classList.add("active");
+
+    // bottom nav active
+    qa(".nav-btn").forEach(b => b.classList.remove("active"));
+    const nb = document.querySelector(`[data-target="${name}"]`);
+    if (nb) nb.classList.add("active");
+
+    updateFloatingBack(name);
   }
-}
 
+  // safe bindings for sidebar buttons
+  const sbHome = $("sb_home"), sbMateri = $("sb_materi"), sbFlash = $("sb_flashcard") || $("sb_flashcards"), sbGame = $("sb_game");
+  if (sbHome) sbHome.addEventListener("click", () => showPanel("home"));
+  if (sbMateri) sbMateri.addEventListener("click", () => showPanel("materi"));
+  if (sbFlash) sbFlash.addEventListener("click", () => showPanel("flashcards"));
+  if (sbGame) sbGame.addEventListener("click", () => { showPanel("game"); showGameInstructions(); });
 
-const questionOverlay = document.getElementById("questionOverlay");
-const qPrompt = document.getElementById("qPrompt");
-const qTimerEl = document.getElementById("qTimer");
-const choiceA = document.getElementById("choiceA");
-const choiceB = document.getElementById("choiceB");
-
-const gameOverOverlay = document.getElementById("gameOverOverlay");
-const loseInfo = document.getElementById("loseInfo");
-const retryBtn = document.getElementById("retryBtn");
-const giveUpBtn = document.getElementById("giveUpBtn");
-
-const winOverlay = document.getElementById("winOverlay");
-const winInfo = document.getElementById("winInfo");
-const winDetail = document.getElementById("winDetail");
-const winRestartBtn = document.getElementById("winRestartBtn");
-const backHomeBtn = document.getElementById("backHomeBtn");
-
-document.querySelectorAll(".backBtn").forEach(b =>
-  b.addEventListener("click", () => {
-    resetAll();
-    show("home");
-  })
-);
-
-// ===== QUESTIONS =====
-const QUESTIONS = [
-  { prompt: "Bawah", correct: "した", wrong: "うえ" },
-  { prompt: "Atas", correct: "うえ", wrong: "した" },
-  { prompt: "Kiri", correct: "ひだり", wrong: "みぎ" },
-  { prompt: "Kanan", correct: "みぎ", wrong: "ひだり" },
-  { prompt: "Depan", correct: "まえ", wrong: "うしろ" },
-  { prompt: "Belakang", correct: "うしろ", wrong: "まえ" },
-  { prompt: "Dalam", correct: "なか", wrong: "そと" },
-  { prompt: "Luar", correct: "そと", wrong: "なか" },
-  { prompt: "Sebelah", correct: "となり", wrong: "よこ" },
-  { prompt: "Samping", correct: "よこ", wrong: "となり" }
-];
-
-const TOTAL_QUESTIONS = 10;
-const ANSWER_TIME = 5;
-const TRIGGER_X = 300;
-
-// ===== STATE =====
-let raf = null;
-let lastTime = 0;
-let gameRunning = false;
-let gameStarted = false;
-let questionActive = false;
-
-let player = null;
-let obstacle = null;
-
-let questionSeq = [];
-let qAsked = 0;
-let correctCount = 0;
-
-let qTimerInterval = null;
-let qTimeout = null;
-
-// ===== HELPERS =====
-function show(id) {
-  sections.forEach(s => {
-    const el = document.getElementById(s);
-    if (el) el.classList.add("hidden");
+  // bottom nav
+  qa(".nav-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const t = btn.dataset.target;
+      if (!t) return;
+      showPanel(t);
+      if (t === "game") showGameInstructions();
+    });
   });
-  const t = document.getElementById(id);
-  if (t) t.classList.remove("hidden");
-}
 
-if (goMateri) goMateri.addEventListener("click", () => show("materi"));
-if (goFlashcard) goFlashcard.addEventListener("click", () => show("flashcards"));
-if (goGame) goGame.addEventListener("click", () => {
-  resetAll();
-  show("game");
-});
+  // home cards
+  const goMateri = $("goMateri"), goFlash = $("goFlashcard"), goGame = $("goGame");
+  if (goMateri) goMateri.addEventListener("click", () => showPanel("materi"));
+  if (goFlash) goFlash.addEventListener("click", () => showPanel("flashcards"));
+  if (goGame) goGame.addEventListener("click", () => { showPanel("game"); showGameInstructions(); });
 
-function shuffle(a) {
-  const arr = a.slice();
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
+  /* floating back */
+  const floatBtn = $("floatingBackBtn");
+  function updateFloatingBack(name) {
+    if (!floatBtn) return;
+    floatBtn.style.display = (name === "home") ? "none" : "flex";
   }
-  return arr;
-}
-function pickQuestions(n) {
-  return shuffle(QUESTIONS).slice(0, Math.min(n, QUESTIONS.length));
-}
+  if (floatBtn) floatBtn.addEventListener("click", () => showPanel("home"));
 
-function clearCanvas() {
-  if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-}
-function drawGround() {
-  if (!ctx) return;
-  ctx.fillStyle = "#7a4f0a";
-  ctx.fillRect(0, 186, canvas.width, 14);
-}
-function drawPlayer() {
-  if (!ctx || !player) return;
-  ctx.fillStyle = "#1273f9";
-  ctx.fillRect(player.x, player.y - player.h, player.w, player.h);
-}
-function drawObstacle() {
-  if (!ctx || !obstacle) return;
-  ctx.fillStyle = "#6b6b6b";
-  ctx.fillRect(obstacle.x, obstacle.y - obstacle.h, obstacle.w, obstacle.h);
-}
-function initCanvas() {
-  clearCanvas();
-  drawGround();
-  drawPlayer();
-}
-
-// ===== RESET =====
-function resetAll() {
-  if (raf) cancelAnimationFrame(raf);
-  if (qTimerInterval) clearInterval(qTimerInterval);
-  if (qTimeout) clearTimeout(qTimeout);
-
-  raf = null;
-  qTimerInterval = null;
-  qTimeout = null;
-
-  gameRunning = false;
-  gameStarted = false;
-  questionActive = false;
-  lastTime = 0;
-  player = { x: 80, y: 150, w: 36, h: 36, vy: 0, gravity: 0.9, jump: -14, onGround: true };
-  obstacle = null;
-  questionSeq = [];
-  qAsked = 0;
-  correctCount = 0;
-
-  [questionOverlay, gameOverOverlay, winOverlay, countdownEl].forEach(el => el && el.classList.add("hidden"));
-  if (nameFormEl) nameFormEl.classList.remove("hidden");
-  if (canvas) canvas.classList.add("hidden");
-  initCanvas();
-}
-
-// ===== PHYSICS LOOP =====
-function updatePhysics(delta) {
-  player.vy += player.gravity * (delta / 16.67);
-  player.y += player.vy * (delta / 16.67);
-  if (player.y >= 150) {
-    player.y = 150;
-    player.vy = 0;
-    player.onGround = true;
-  } else player.onGround = false;
-
-  if (obstacle && !questionActive) obstacle.x -= obstacle.speed * (delta / 16.67);
-}
-
-function loop(ts) {
-  if (!lastTime) lastTime = ts;
-  const delta = ts - lastTime;
-  lastTime = ts;
-
-  if (gameRunning) {
-    updatePhysics(delta);
-    clearCanvas();
-    drawGround();
-    drawPlayer();
-    drawObstacle();
-
-    if (gameStarted && obstacle && !questionActive) {
-      const p = { x: player.x, y: player.y - player.h, w: player.w, h: player.h };
-      const o = { x: obstacle.x, y: obstacle.y - obstacle.h, w: obstacle.w, h: obstacle.h };
-      if (p.x < o.x + o.w && p.x + p.w > o.x && p.y < o.y + o.h && p.y + p.h > o.y) {
-        handleLose("Kamu terkena rintangan (tertabrak).");
-        return;
-      }
-      if (obstacle.x <= TRIGGER_X && !questionActive) startQuestion();
-    }
-  }
-  raf = requestAnimationFrame(loop);
-}
-
-// ===== START GAME =====
-function spawnObstacle() {
-  obstacle = { x: canvas.width + 200, y: 186, w: 28, h: 36, speed: 5 + Math.random() * 2 };
-}
-
-function beginGameAfterCountdown() {
-  questionSeq = pickQuestions(TOTAL_QUESTIONS);
-  qAsked = 0;
-  correctCount = 0;
-  spawnObstacle();
-  gameRunning = true;
-  gameStarted = true;
-  lastTime = 0;
-  if (!raf) raf = requestAnimationFrame(loop);
-}
-
-// ===== QUESTIONS =====
-function startQuestion() {
-  if (!gameStarted || questionActive || !obstacle) return;
-  if (qAsked >= TOTAL_QUESTIONS) {
-    handleWin();
-    return;
+  /* theme toggle */
+  const themeToggle = $("themeToggle");
+  if (themeToggle) {
+    themeToggle.addEventListener("click", () => {
+      document.body.classList.toggle("dark");
+      themeToggle.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
+    });
   }
 
-  questionActive = true;
-  const q = questionSeq[qAsked++];
-  const order = Math.random() < 0.5 ? ["correct", "wrong"] : ["wrong", "correct"];
-  choiceA.textContent = q[order[0]];
-  choiceB.textContent = q[order[1]];
-  choiceA.dataset.correct = order[0] === "correct" ? "1" : "0";
-  choiceB.dataset.correct = order[1] === "correct" ? "1" : "0";
-  qPrompt.textContent = q.prompt;
-  qTimerEl.textContent = ANSWER_TIME;
+  /* ===================== MATERI POSISI ===================== */
+  const posData = {
+    ue:{hira:"うえ",arti:"atas",penjelasan:"Posisi di bagian atas。",contoh:"つくえのうえに ほんがあります。",contohArti:"Ada buku di atas meja。"},
+    shita:{hira:"した",arti:"bawah",penjelasan:"Posisi di bawah。",contoh:"テーブルのしたに ねこがいます。",contohArti:"Ada kucing di bawah meja。"},
+    mae:{hira:"まえ",arti:"depan",penjelasan:"Posisi di depan。",contoh:"がっこうのまえに バスていがあります。",contohArti:"Ada halte di depan sekolah。"},
+    ushiro:{hira:"うしろ",arti:"belakang",penjelasan:"Posisi di belakang。",contoh:"いすのうしろに かばんがあります。",contohArti:"Ada tas di belakang kursi。"},
+    naka:{hira:"なか",arti:"dalam",penjelasan:"Posisi di dalam。",contoh:"かばんのなかに ノートがあります。",contohArti:"Ada buku catatan di dalam tas。"},
+    soto:{hira:"そと",arti:"luar",penjelasan:"Posisi di luar。",contoh:"へやのそとに ねこがいます。",contohArti:"Ada kucing di luar ruangan。"},
+    migi:{hira:"みぎ",arti:"kanan",penjelasan:"Posisi kanan。",contoh:"ぎんこうは スーパーのみぎです。",contohArti:"Bank di sebelah kanan supermarket。"},
+    hidari:{hira:"ひだり",arti:"kiri",penjelasan:"Posisi kiri。",contoh:"くるまは みちのひだりを はしります。",contohArti:"Mobil berjalan di kiri jalan。"},
+    tonari:{hira:"となり",arti:"sebelah",penjelasan:"Bersebelahan。",contoh:"わたしのとなりに ともだちがいます。",contohArti:"Teman saya ada di sebelah。"},
+    yoko:{hira:"よこ",arti:"samping",penjelasan:"Posisi samping。",contoh:"いすのよこに かばんがあります。",contohArti:"Ada tas di samping kursi。"}
+  };
 
-  questionOverlay.classList.remove("hidden");
+  const posBtns = qa(".posBtn");
+  const posInfoBox = $("posInfoBox");
+  const posWord = $("posWord");
+  const posArti = $("posArti");
+  const posPenjelasan = $("posPenjelasan");
+  const posContoh = $("posContoh");
+  const posContohArti = $("posContohArti");
+  const posCard3D = $("posCard3D");
 
-  let remain = ANSWER_TIME;
-  qTimerInterval = setInterval(() => {
-    remain--;
-    qTimerEl.textContent = remain;
-    if (remain <= 0) {
-      clearInterval(qTimerInterval);
-      stopQuestion();
-      handleLose("Waktu habis — rintangan tidak hilang.");
-    }
-  }, 1000);
+  posBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const key = btn.dataset.key;
+      const d = posData[key];
+      if (!d) return;
+      if (posWord) posWord.textContent = d.hira;
+      if (posArti) posArti.textContent = d.arti;
+      if (posPenjelasan) posPenjelasan.textContent = d.penjelasan;
+      if (posContoh) posContoh.textContent = d.contoh;
+      if (posContohArti) posContohArti.textContent = d.contohArti;
+      if (posInfoBox) posInfoBox.classList.remove("hidden");
+      posInfoBox && posInfoBox.scrollIntoView({behavior:"smooth", block:"center"});
+    });
+  });
+  if (posCard3D) posCard3D.addEventListener("click", () => posCard3D.classList.toggle("flipped"));
 
-  qTimeout = setTimeout(() => {
-    if (questionActive) {
-      stopQuestion();
-      handleLose("Waktu habis — rintangan tidak hilang.");
-    }
-  }, (ANSWER_TIME + 0.5) * 1000);
-}
-
-function stopQuestion() {
-  questionActive = false;
-  questionOverlay.classList.add("hidden");
-  if (qTimerInterval) clearInterval(qTimerInterval);
-  if (qTimeout) clearTimeout(qTimeout);
-  qTimerInterval = null;
-  qTimeout = null;
-}
-
-// ===== ANSWER HANDLER =====
-function onAnswerClick(e) {
-  if (!questionActive) return;
-  const isCorrect = e.currentTarget.dataset.correct === "1";
-  stopQuestion();
-
-  if (isCorrect) {
-    correctCount++;
-    obstacle = null;
-    if (player.onGround) {
-      player.vy = player.jump;
-      player.onGround = false;
-    }
-    if (correctCount >= TOTAL_QUESTIONS) {
-      setTimeout(() => handleWin(), 300);
-      return;
-    }
-    setTimeout(() => spawnObstacle(), 900);
-  } else {
-    handleLose("Jawaban salah — kamu terkena rintangan.");
-  }
-}
-
-// ===== END CONDITIONS =====
-function handleWin() {
-  gameRunning = false;
-  gameStarted = false;
-  if (raf) cancelAnimationFrame(raf);
-  winInfo.textContent = "🎉 Selamat!";
-  winDetail.textContent = `${playerNameInput.value}, kamu menjawab benar ${correctCount} dari ${TOTAL_QUESTIONS} pertanyaan!`;
-  winOverlay.classList.remove("hidden");
-}
-
-function handleLose(msg) {
-  gameRunning = false;
-  gameStarted = false;
-  if (raf) cancelAnimationFrame(raf);
-  if (qTimerInterval) clearInterval(qTimerInterval);
-  if (qTimeout) clearTimeout(qTimeout);
-  loseInfo.textContent = `${msg} (Benar: ${correctCount}/${TOTAL_QUESTIONS})`;
-  gameOverOverlay.classList.remove("hidden");
-}
-
-// ===== UI EVENTS =====
-startBtn.addEventListener("click", () => {
-  const nm = (playerNameInput.value || "").trim();
-  if (!nm) {
-    alert("Masukkan nama dulu ya!");
-    return;
-  }
-  resetAll();
-  nameFormEl.classList.add("hidden");
-  canvas.classList.remove("hidden");
-
-  let c = 3;
-  countdownEl.classList.remove("hidden");
-  countNum.textContent = c;
-  const t = setInterval(() => {
-    c--;
-    countNum.textContent = c;
-    if (c <= 0) {
-      clearInterval(t);
-      countdownEl.classList.add("hidden");
-      beginGameAfterCountdown();
-    }
-  }, 1000);
-});
-
-choiceA.addEventListener("click", onAnswerClick);
-choiceB.addEventListener("click", onAnswerClick);
-
-// 🔧 FIX: ulangi game setelah kalah
-retryBtn.addEventListener("click", () => {
-  gameOverOverlay.classList.add("hidden");
-  resetAll();
-  nameFormEl.classList.add("hidden");
-  canvas.classList.remove("hidden");
-
-  let c = 3;
-  countdownEl.classList.remove("hidden");
-  countNum.textContent = c;
-
-  const t = setInterval(() => {
-    c--;
-    countNum.textContent = c;
-    if (c <= 0) {
-      clearInterval(t);
-      countdownEl.classList.add("hidden");
-      questionSeq = pickQuestions(TOTAL_QUESTIONS);
-      qAsked = 0;
-      correctCount = 0;
-      spawnObstacle();
-      gameRunning = true;
-      gameStarted = true;
-      lastTime = 0;
-      if (!raf) raf = requestAnimationFrame(loop);
-    }
-  }, 1000);
-});
-
-giveUpBtn.addEventListener("click", () => {
-  gameOverOverlay.classList.add("hidden");
-  resetAll();
-  playerNameInput.value = "";
-  show("home");
-});
-
-winRestartBtn.addEventListener("click", () => {
-  winOverlay.classList.add("hidden");
-  resetAll();
-  playerNameInput.value = "";
-  show("game");
-});
-
-backHomeBtn.addEventListener("click", () => {
-  winOverlay.classList.add("hidden");
-  resetAll();
-  playerNameInput.value = "";
-  show("home");
-});
-
-document.addEventListener("keydown", e => {
-  if ((e.code === "Space" || e.code === "ArrowUp") && player && player.onGround) {
-    player.vy = player.jump;
-    player.onGround = false;
-  }
-});
-
-resetAll();
-
-
-// ===== FLASHCARD (REPLACEMENT: full fitur mark/shuffle/reset) =====
-(function(){
-  const SAMPLE = [
-    { image: "images/ue.jpg", hira: "うえ", romaji: "ue", meaning: "atas", desc: "Posisi di atas sesuatu." },
-    { image: "images/shita.jpg", hira: "した", romaji: "shita", meaning: "bawah", desc: "Posisi di bawah sesuatu." },
-    { image: "images/mae.jpg", hira: "まえ", romaji: "mae", meaning: "depan", desc: "Bagian depan." },
-    { image: "images/ushiro.jpg", hira: "うしろ", romaji: "ushiro", meaning: "belakang", desc: "Bagian belakang." },
-    { image: "images/naka.jpg", hira: "なか", romaji: "naka", meaning: "dalam", desc: "Di dalam." },
-    { image: "images/soto.jpg", hira: "そと", romaji: "soto", meaning: "luar", desc: "Di luar." },
-    { image: "images/migi.jpg", hira: "みぎ", romaji: "migi", meaning: "kanan", desc: "Di sisi kanan." },
-    { image: "images/hidari.jpg", hira: "ひだり", romaji: "hidari", meaning: "kiri", desc: "Di sisi kiri." },
-    { image: "images/tonari.jpg", hira: "となり", romaji: "tonari", meaning: "sebelah", desc: "Berdekatan." },
-    { image: "images/yoko.jpg", hira: "よこ", romaji: "yoko", meaning: "samping", desc: "Di samping." }
+  /* ===================== FLASHCARDS ===================== */
+  const VOCAB = [
+    {image:"images/ue.jpg",hira:"うえ",romaji:"ue",meaning:"atas",desc:"Posisi di atas。"},
+    {image:"images/shita.jpg",hira:"した",romaji:"shita",meaning:"bawah",desc:"Posisi di bawah。"},
+    {image:"images/mae.jpg",hira:"まえ",romaji:"mae",meaning:"depan",desc:"Posisi depan。"},
+    {image:"images/ushiro.jpg",hira:"うしろ",romaji:"ushiro",meaning:"belakang",desc:"Posisi belakang。"},
+    {image:"images/naka.jpg",hira:"なか",romaji:"naka",meaning:"dalam",desc:"Posisi dalam。"},
+    {image:"images/soto.jpg",hira:"そと",romaji:"soto",meaning:"luar",desc:"Posisi luar。"},
+    {image:"images/migi.jpg",hira:"みぎ",romaji:"migi",meaning:"kanan",desc:"Posisi kanan。"},
+    {image:"images/hidari.jpg",hira:"ひだり",romaji:"hidari",meaning:"kiri",desc:"Posisi kiri。"},
+    {image:"images/tonari.jpg",hira:"となり",romaji:"tonari",meaning:"sebelah",desc:"Bersebelahan。"},
+    {image:"images/yoko.jpg",hira:"よこ",romaji:"yoko",meaning:"samping",desc:"Posisi samping。"}
   ];
 
-  // DOM refs
-  const cardEl = document.getElementById("card");
-  const imgEl = document.getElementById("cardImage");
-  const hiraEl = document.getElementById("hiraganaText");
-  const romajiEl = document.getElementById("romajiText");
-  const meaningEl = document.getElementById("meaningText");
-  // descText already created in HTML; if not, create fallback
-  let descEl = document.getElementById("descText");
-  if(!descEl){
-    descEl = document.createElement("div");
-    descEl.id = "descText";
-    descEl.style.marginTop = "10px";
-    descEl.style.fontSize = "0.95rem";
-    descEl.style.color = "#fff";
-    descEl.style.textAlign = "center";
-    const back = document.getElementById("card-back");
-    if(back){
-      const bc = back.querySelector(".back-content") || back;
-      bc.appendChild(descEl);
-    }
+  // flashcard elements (safe)
+  const cardEl = $("card");
+  const cardImage = $("cardImage");
+  const hiraganaText = $("hiraganaText");
+  const romajiText = $("romajiText");
+  const meaningText = $("meaningText");
+  const descText = $("descText");
+  const prevBtn = $("prevBtn");
+  const nextBtn = $("nextBtn");
+  const flipBtn = $("flipBtn");
+  const shuffleBtn = $("shuffleBtn");
+  const markBtn = $("markBtn");
+  const resetProgressBtn = $("resetProgressBtn");
+  const learnedCount = $("learnedCount");
+  const totalCount = $("totalCount");
+
+  let idx = 0;
+  function renderCard() {
+    const c = VOCAB[idx];
+    if (!c) return;
+    if (cardImage) cardImage.src = c.image;
+    if (hiraganaText) hiraganaText.textContent = c.hira;
+    if (romajiText) romajiText.textContent = c.romaji;
+    if (meaningText) meaningText.textContent = c.meaning;
+    if (descText) descText.textContent = c.desc;
+    if (cardEl) cardEl.classList.remove("flipped");
+    if (learnedCount) learnedCount.textContent = Object.keys(JSON.parse(localStorage.getItem("flash_progress_v1") || "{}")).length;
+    if (totalCount) totalCount.textContent = VOCAB.length;
   }
 
-  const prevBtn = document.getElementById("prevBtn");
-  const nextBtn = document.getElementById("nextBtn");
-  const flipBtn = document.getElementById("flipBtn");
-  const markBtn = document.getElementById("markBtn");
-  const shuffleBtn = document.getElementById("shuffleBtn");
-  const resetProgressBtn = document.getElementById("resetProgressBtn");
+  if (prevBtn) prevBtn.addEventListener("click", () => { idx = (idx - 1 + VOCAB.length) % VOCAB.length; renderCard(); });
+  if (nextBtn) nextBtn.addEventListener("click", () => { idx = (idx + 1) % VOCAB.length; renderCard(); });
+  if (flipBtn) flipBtn.addEventListener("click", () => cardEl && cardEl.classList.toggle("flipped"));
+  if (shuffleBtn) shuffleBtn.addEventListener("click", () => { VOCAB.sort(()=>Math.random()-0.5); idx = 0; renderCard(); });
+  if (resetProgressBtn) resetProgressBtn.addEventListener("click", () => { localStorage.removeItem("flash_progress_v1"); renderCard(); });
 
-  const learnedCountEl = document.getElementById("learnedCount");
-  const totalCountEl = document.getElementById("totalCount");
+  renderCard();
 
-  // storage key
-  const STORAGE_KEY = "flash_progress_v1";
+  /* ===================== KANJI WOLF (Hiragana-only) ===================== */
+  // Data pools (we'll use textual pairs; adapt per request)
+  // Level 1-5: simple statement pairs (one wrong among simple)
+  // Level 6-10: advanced pattern using 'ada di' sentences (material-style)
+  const SIMPLE_CORRECT = [
+    { jp: 'aku tau bahasa jepang bawah adalah "した".' , id: 'correct-simple-1' },
+    { jp: 'aku tau bahasa jepang atas adalah "うえ".' , id: 'correct-simple-2' },
+    { jp: 'aku tau bahasa jepang kiri adalah "ひだり".' , id: 'correct-simple-3' },
+    { jp: 'aku tau bahasa jepang kanan adalah "みぎ".' , id: 'correct-simple-4' },
+    { jp: 'aku tau bahasa jepang depan adalah "まえ".' , id: 'correct-simple-5' }
+  ];
+  // wrong variants for simple (mismatch one)
+  const SIMPLE_WRONG = [
+    { jp: 'aku tau bahasa jepang atas adalah "ひだり".' , id: 'wrong-simple-1' }, // intentional wrong mapping
+    { jp: 'aku tau bahasa jepang bawah adalah "みぎ".' , id: 'wrong-simple-2' },
+    { jp: 'aku tau bahasa jepang kiri adalah "うえ".' , id: 'wrong-simple-3' }
+  ];
 
-  // safety: if core elements missing, don't crash
-  if(!cardEl || !imgEl || !hiraEl || !romajiEl || !meaningEl){
-    console.warn("Flashcards init aborted — elemen kunci tidak ditemukan.");
-    return;
-  }
+  // advanced correct/ wrong — format uses material-like sentences
+  const ADV_CORRECT = [
+    { jp: 'Ada pensil di atas meja, つくえのうえに えんぴつがあります。', id: 'adv-c-1' },
+    { jp: 'Ada buku di dalam tas, かばんのなかに ほんがあります。', id: 'adv-c-2' },
+    { jp: 'Ada kucing di luar rumah, いえのそとに ねこがいます。', id: 'adv-c-3' },
+    { jp: 'Ada kursi di sebelah meja, いすのよこに テーブルがあります。', id: 'adv-c-4' }
+  ];
+  const ADV_WRONG = [
+    { jp: 'Ada pohon di dalam, なかにきがありま', id: 'adv-w-1' }, // broken/incorrect grammar
+    { jp: 'Ada pensil di bawah meja, つくえのしたに えんぴつが みます。', id: 'adv-w-2' },
+    { jp: 'Ada buku di luar tas, かばんのそとに ほんが みます。', id: 'adv-w-3' }
+  ];
+
+  // DOM game pieces
+  const npcList = $("npcList");
+  const kwLevel = $("kw-level");
+  const kwLives = $("kw-lives");
+  const kwMsg = $("kw-msg");
+  const kwOverlay = $("kw-overlay");
+  const kwOverlayTitle = $("kw-overlay-title");
+  const kwOverlayDetail = $("kw-overlay-detail");
+  const kwPlayAgain = $("kw-play-again");
+  const kwBackHome = $("kw-back-home");
+  const kwRestart = $("kw-restart");
+  // start/instructions
+  const gameInstructions = $("gameInstructions");
+  const gameArena = $("gameArena");
+  const startGameBtn = $("startGameBtn");
 
   // state
-  let VOCAB = SAMPLE.slice();
-  let idx = 0;
+  let level = 1;
+  let lives = 3;
+  let correctCount = 0;
+  let wrongCount = 0;
+  let inRound = false;
 
-  // helpers
-  function renderCounts(){
-    const prog = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    if(learnedCountEl) learnedCountEl.textContent = Object.keys(prog).length;
-    if(totalCountEl) totalCountEl.textContent = VOCAB.length;
+  function shuffleArray(arr) { return arr.sort(()=>Math.random()-0.5); }
+
+  function setLives(n){
+    lives = Math.max(0, n);
+    if (kwLives) kwLives.textContent = "Lives: " + "♥".repeat(lives);
+  }
+  function setLevel(n){
+    level = Math.max(1, n);
+    if (kwLevel) kwLevel.textContent = "Level: " + level;
+  }
+  function showMsg(txt, short=true){
+    if (!kwMsg) return;
+    kwMsg.textContent = txt;
+    if (!short) setTimeout(()=> { if (kwMsg) kwMsg.textContent = ""; }, 1600);
   }
 
-  function updateMarkBtn(){
-    if(!markBtn) return;
-    const prog = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    const cur = VOCAB[idx];
-    markBtn.textContent = prog[cur.hira] ? "Unmark" : "Mark";
-  }
-
-  function renderCard(){
-    const cur = VOCAB[idx];
-    imgEl.src = cur.image || "images/placeholder.png";
-    imgEl.alt = cur.hira || "";
-    hiraEl.textContent = cur.hira;
-    romajiEl.textContent = cur.romaji;
-    meaningEl.textContent = cur.meaning;
-    descEl.textContent = cur.desc || "";
-    // always show front when changing card
-    cardEl.classList.remove("flipped");
-    updateMarkBtn();
-  }
-
-  // events (safe attach)
-  if(flipBtn) flipBtn.addEventListener("click", ()=> cardEl.classList.toggle("flipped"));
-  if(prevBtn) prevBtn.addEventListener("click", ()=>{
-    idx = (idx - 1 + VOCAB.length) % VOCAB.length;
-    renderCard();
-  });
-  if(nextBtn) nextBtn.addEventListener("click", ()=>{
-    idx = (idx + 1) % VOCAB.length;
-    renderCard();
-  });
-
-  if(shuffleBtn) shuffleBtn.addEventListener("click", ()=>{
-    VOCAB.sort(()=>Math.random()-0.5);
-    idx = 0;
-    renderCard();
-  });
-
-  if(markBtn) markBtn.addEventListener("click", ()=>{
-    const cur = VOCAB[idx];
-    const prog = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-    if(prog[cur.hira]) delete prog[cur.hira]; else prog[cur.hira] = true;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(prog));
-    updateMarkBtn();
-    renderCounts();
-  });
-
-  if(resetProgressBtn) resetProgressBtn.addEventListener("click", ()=>{
-    if(confirm("Hapus semua progress belajar?")){
-      localStorage.removeItem(STORAGE_KEY);
-      renderCounts();
-      updateMarkBtn();
+  function buildNPCslots(){
+    if (!npcList) return;
+    npcList.innerHTML = "";
+    for (let i=0;i<6;i++){
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "npc";
+      btn.innerHTML = `<div class="avatar">🙂</div><div class="bubble"></div>`;
+      npcList.appendChild(btn);
     }
+  }
+
+  function generateRound(){
+    if (!npcList) return;
+    inRound = true;
+    const slots = Array.from(npcList.querySelectorAll(".npc"));
+    const npcCount = (level <= 5) ? 3 : 4;
+
+    // choose pools based on level
+    const C = (level <=5) ? SIMPLE_CORRECT : ADV_CORRECT;
+    const W = (level <=5) ? SIMPLE_WRONG : ADV_WRONG;
+
+    // choose one wrong and fill rest with corrects (ensuring uniqueness)
+    const wrong = shuffleArray(W)[0];
+    let corrects = shuffleArray(C).slice(0, npcCount - 1);
+
+    // create final array of objects
+    const final = shuffleArray([wrong, ...corrects]);
+
+    slots.forEach((el, i) => {
+      const bubble = el.querySelector(".bubble");
+      el.classList.remove("wrong","success");
+      el.disabled = false;
+      if (i < npcCount){
+        const item = final[i];
+        bubble.textContent = item.jp;
+        // mark wrong with data-wrong="1"
+        el.dataset.isWrong = (item.id && item.id.startsWith("wrong") || item.id && item.id.startsWith("adv-w")) ? "1" : "0";
+        el.style.display = "flex";
+        el.onclick = onNpcClick;
+      } else {
+        el.style.display = "none";
+        el.onclick = null;
+      }
+    });
+
+    setLevel(level);
+    setLives(lives);
+    inRound = false;
+  }
+
+  function onNpcClick(e){
+    if (inRound) return;
+    const btn = e.currentTarget;
+    if (!btn) return;
+    const isWrong = btn.dataset.isWrong === "1";
+
+    if (isWrong){
+      // found the liar -> good
+      btn.classList.add("success");
+      correctCount++;
+      level++;
+      setTimeout(() => {
+        if (level > 10) return finishGame(true);
+        generateRound();
+      }, 700);
+    } else {
+      // wrong pick
+      btn.classList.add("wrong");
+      wrongCount++;
+      setLives(lives - 1);
+      showMsg("Salah — itu bukan うそつき!", false);
+      if (lives <= 0) {
+        setTimeout(()=> finishGame(false), 700);
+      }
+    }
+  }
+
+  function finishGame(win){
+    if (!kwOverlay) return;
+    kwOverlay.classList.remove("hidden");
+    if (kwOverlayTitle) kwOverlayTitle.textContent = win ? "Kamu Menang!" : "Game Over";
+    // always show stats
+    if (kwOverlayDetail) kwOverlayDetail.innerHTML = `
+      Level tercapai: ${Math.min(level, 10)}<br>
+      Jawaban benar: <b>${correctCount}</b><br>
+      Jawaban salah: <b>${wrongCount}</b>
+    `;
+  }
+
+  function resetGame(){
+    level = 1;
+    lives = 3;
+    correctCount = 0;
+    wrongCount = 0;
+    if (kwOverlay) kwOverlay.classList.add("hidden");
+    generateRound();
+  }
+
+  if (kwRestart) kwRestart.addEventListener("click", resetGame);
+  if (kwPlayAgain) kwPlayAgain.addEventListener("click", resetGame);
+  if (kwBackHome) kwBackHome.addEventListener("click", () => { if (kwOverlay) kwOverlay.classList.add("hidden"); showPanel("home"); });
+
+  // Start/Instructions behavior
+  function showGameInstructions(){
+    if (gameInstructions) gameInstructions.classList.remove("hidden");
+    if (gameArena) gameArena.classList.add("hidden");
+  }
+  function startGame(){
+    if (gameInstructions) gameInstructions.classList.add("hidden");
+    if (gameArena) gameArena.classList.remove("hidden");
+    buildNPCslots();
+    resetGame();
+  }
+
+  if (startGameBtn) {
+    startGameBtn.addEventListener("click", startGame);
+  } else {
+    console.warn("startGameBtn not found — ensure #startGameBtn exists in HTML");
+  }
+
+  // When user opens the game panel via nav, show instructions not arena
+  if (sbGame) {
+    sbGame.addEventListener("click", showGameInstructions);
+  }
+  qa('.nav-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      if (b.dataset.target === 'game') showGameInstructions();
+    });
   });
 
-  // keyboard shortcuts (optional)
-  document.addEventListener("keydown", (e)=>{
-    const panel = document.getElementById("flashcards");
-    if(panel && panel.classList.contains("hidden")) return; // only when visible
-    if(e.key === "ArrowLeft") prevBtn && prevBtn.click();
-    if(e.key === "ArrowRight") nextBtn && nextBtn.click();
-    if(e.code === "Space") { e.preventDefault(); flipBtn && flipBtn.click(); }
-  });
-
-  // init
-  renderCounts();
+  // Initialize minimal UI
+  showPanel('home');
+  updateFloatingBack('home');
+  // Build flashcard and NPC skeleton so UI elements exist
+  buildNPCslots();
+  // Render initial if flashcards present
   renderCard();
-})();
 
+  console.log("script initialization complete");
+}); // DOMContentLoaded end
 
+/* ========== DARK MODE MOBILE ========== */
+const themeToggleMobile = document.getElementById("themeToggleMobile");
 
-// ===== MATERI INTERAKTIF =====
-document.querySelectorAll(".toggleBtn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    const example = btn.nextElementSibling;
-    if (!example) return;
-    example.classList.toggle("hidden");
-    btn.textContent = example.classList.contains("hidden") ? "Lihat Contoh" : "Tutup Contoh";
-  });
-});
+if (themeToggleMobile) {
+  themeToggleMobile.onclick = () => {
+    document.body.classList.toggle("dark");
 
-document.querySelectorAll(".posBtn").forEach(btn => {
-  btn.addEventListener("click", () => {
-    const hira = btn.dataset.hira;
-    const romaji = btn.dataset.romaji;
-    const indo = btn.dataset.indo;
-    document.getElementById("posHira").textContent = hira;
-    document.getElementById("posRomaji").textContent = romaji;
-    document.getElementById("posIndo").textContent = indo;
-    document.getElementById("posInfo").classList.remove("hidden");
-  });
-});
+    // Ganti icon
+    const isDark = document.body.classList.contains("dark");
+    themeToggleMobile.textContent = isDark ? "☀️" : "🌙";
+  };
+}
