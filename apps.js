@@ -377,6 +377,13 @@ document.addEventListener("DOMContentLoaded", () => {
 }); // DOMContentLoaded end
 
 /* ========== DARK MODE MOBILE ========== */
+
+document.getElementById("game2Link").addEventListener("click", function (e) {
+    e.stopPropagation();
+    window.location.href = this.getAttribute("href");
+  });
+
+/* ========== DARK MODE MOBILE ========== */
 const themeToggleMobile = document.getElementById("themeToggleMobile");
 
 if (themeToggleMobile) {
