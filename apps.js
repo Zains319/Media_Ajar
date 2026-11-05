@@ -395,3 +395,68 @@ if (themeToggleMobile) {
     themeToggleMobile.textContent = isDark ? "☀️" : "🌙";
   };
 }
+
+/* ========== MODE ADMIN ========== */
+document.addEventListener("DOMContentLoaded", function () {
+  const PASSWORD = "Admin123";
+  const KEY = "materi_edits_v1";
+  let editMode = false;
+
+  // Bagian yang bisa diedit: card di Materi (kecuali kosakata posisi) + deskripsi Game 2
+  function targets() {
+    const list = [...document.querySelectorAll("#materi .card-block")]
+      .filter(el => !el.querySelector(".pos-grid"));
+    const g2 = document.querySelector("#game2Card p");
+    if (g2) list.push(g2);
+    return list;
+  }
+
+  // Terapkan hasil edit yang tersimpan
+  (function load() {
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) {}
+    targets().forEach((el, i) => {
+      if (saved[i] !== undefined) el.innerHTML = saved[i];
+    });
+  })();
+
+  function setEdit(on) {
+    editMode = on;
+    targets().forEach(el => {
+      el.contentEditable = on ? "true" : "false";
+      el.classList.toggle("editing", on);
+    });
+    document.getElementById("adminBar").style.display = on ? "flex" : "none";
+    document.getElementById("adminBtn").textContent = on ? "✏️ Mode Edit" : "🔒 Admin";
+  }
+
+  document.getElementById("adminBtn").addEventListener("click", function () {
+    if (editMode) return;
+    const input = prompt("Masukkan sandi Admin:");
+    if (input === null) return;
+    if (input === PASSWORD) {
+      setEdit(true);
+      alert("Mode edit aktif. Klik teks materi untuk mengubahnya, lalu tekan Simpan.");
+    } else {
+      alert("Sandi salah!");
+    }
+  });
+
+  document.getElementById("adminSave").addEventListener("click", function () {
+    const data = {};
+    targets().forEach((el, i) => { data[i] = el.innerHTML; });
+    localStorage.setItem(KEY, JSON.stringify(data));
+    alert("Perubahan tersimpan.");
+  });
+
+  document.getElementById("adminReset").addEventListener("click", function () {
+    if (confirm("Kembalikan semua materi ke isi awal?")) {
+      localStorage.removeItem(KEY);
+      location.reload();
+    }
+  });
+
+  document.getElementById("adminExit").addEventListener("click", function () {
+    setEdit(false);
+  });
+});
