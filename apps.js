@@ -396,11 +396,15 @@ if (themeToggleMobile) {
   };
 }
 
-/* ========== MODE ADMIN ========== */
-document.addEventListener("DOMContentLoaded", function () {
+/* ===== ADMIN: EDIT MATERI ===== */
+(function () {
   const PASSWORD = "Admin123";
   const KEY = "materi_edits_v1";
   let editMode = false;
+
+  const adminBtn = document.getElementById("adminBtn");
+  const adminBar = document.getElementById("adminBar");
+  if (!adminBtn || !adminBar) return;
 
   // Bagian yang bisa diedit: card di Materi (kecuali kosakata posisi) + deskripsi Game 2
   function targets() {
@@ -426,20 +430,39 @@ document.addEventListener("DOMContentLoaded", function () {
       el.contentEditable = on ? "true" : "false";
       el.classList.toggle("editing", on);
     });
-    document.getElementById("adminBar").style.display = on ? "flex" : "none";
-    document.getElementById("adminBtn").textContent = on ? "✏️ Mode Edit" : "🔒 Admin";
+    adminBar.style.display = on ? "flex" : "none";
+    adminBtn.textContent = on ? "✏️ Mode Edit" : "🔒 Admin";
   }
 
-  document.getElementById("adminBtn").addEventListener("click", function () {
-    if (editMode) return;
-    const input = prompt("Masukkan sandi Admin:");
-    if (input === null) return;
-    if (input === PASSWORD) {
-      setEdit(true);
-      alert("Mode edit aktif. Klik teks materi untuk mengubahnya, lalu tekan Simpan.");
-    } else {
-      alert("Sandi salah!");
+  function askPassword() {
+    if (document.getElementById("adminPwBox")) return;
+    const box = document.createElement("div");
+    box.id = "adminPwBox";
+    box.style.cssText =
+      "position:fixed;left:16px;bottom:140px;z-index:99999;background:#fff;color:#000;" +
+      "padding:12px;border-radius:12px;box-shadow:0 4px 16px rgba(0,0,0,.3);";
+    box.innerHTML =
+      '<input id="adminPwInput" type="password" placeholder="Sandi Admin" ' +
+      'style="padding:8px;border:1px solid #aaa;border-radius:8px;"> ' +
+      '<button id="adminPwOk" style="padding:8px 12px;border:none;border-radius:8px;' +
+      'background:#16a34a;color:#fff;cursor:pointer;">OK</button>';
+    document.body.appendChild(box);
+
+    const input = document.getElementById("adminPwInput");
+    input.focus();
+
+    function submit() {
+      const v = input.value;
+      box.remove();
+      if (v === PASSWORD) setEdit(true);
+      else alert("Sandi salah!");
     }
+    document.getElementById("adminPwOk").addEventListener("click", submit);
+    input.addEventListener("keydown", e => { if (e.key === "Enter") submit(); });
+  }
+
+  adminBtn.addEventListener("click", function () {
+    if (!editMode) askPassword();
   });
 
   document.getElementById("adminSave").addEventListener("click", function () {
@@ -459,4 +482,4 @@ document.addEventListener("DOMContentLoaded", function () {
   document.getElementById("adminExit").addEventListener("click", function () {
     setEdit(false);
   });
-});
+})();
